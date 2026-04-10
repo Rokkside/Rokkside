@@ -30,7 +30,7 @@ I'm passionate about cybersecurity and love tackling complex challenges through 
 <img width="35" alt="image" src="https://github.com/user-attachments/assets/2f41c7cd-5ea8-4475-b451-a37161b6c3fb"> 
 <img width="35" alt="image" src="https://github.com/user-attachments/assets/77649969-9910-4994-8b96-74a116cfb2a8">
 
-[Amazon AWS](https://img.shields.io/badge/Amazon%20AWS-232F3E?style=flat-square&logo=amazon-aws)
+<[Amazon AWS](https://img.shields.io/badge/Amazon%20AWS-232F3E?style=flat-square&logo=amazon-aws)>
 [Git](https://img.shields.io/badge/-Git-black?style=flat-square&logo=git)
 [GitHub](https://img.shields.io/badge/-GitHub-181717?style=flat-square&logo=github)
 [Python](https://img.shields.io/badge/-Python-black?style=flat-square&logo=Python)
