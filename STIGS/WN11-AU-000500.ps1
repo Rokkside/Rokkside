@@ -34,5 +34,5 @@ New-Item -Path $Path -Force | Out-Null
 # Set MaxSize (DWORD) to 32768 (0x8000)
 New-ItemProperty -Path $Path -Name "MaxSize" -Value 32768 -PropertyType DWord -Force | Out-Null
 
-# Verify the setting
+# Verify the setting.
 Get-ItemProperty -Path $Path -Name MaxSize 
