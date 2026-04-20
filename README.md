@@ -12,6 +12,41 @@ I'm passionate about cybersecurity and love tackling complex challenges through 
 
 - **[Threat Hunting Scenario (Tor Browser Usage)](https://github.com/Rokkside/threat-hunting-scenario-tor)**
 
+## 🔐 Windows 11 STIG Automation Lab
+
+This project demonstrates the implementation, troubleshooting, and validation of Windows 11 STIG controls using PowerShell in a hands-on lab environment.
+
+### 🎯 Objective
+- Automate STIG compliance using PowerShell
+- Identify failed controls using Tenable vulnerability scans
+- Remediate and validate security configurations
+- Understand real-world policy conflicts (GPO vs Local vs Legacy)
+
+---
+
+## 🧪 Lab Workflow
+
+1. Run Tenable scan → Identify FAILED STIG control  
+2. Implement remediation via PowerShell  
+3. Validate locally (`auditpol`, registry, etc.)  
+4. Re-run scan → Confirm PASS  
+
+---
+
+## 📌 Implemented Controls
+
+### 🔹 WN11-AU-000050 – Audit Process Creation
+
+- Enables Detailed Tracking → Process Creation (Success)
+- Uses `auditpol` for configuration
+- Generates Event ID 4688 for process execution visibility
+
+⚠️ **Troubleshooting Insight:**
+- Initial configuration failed due to legacy audit policy overriding advanced audit settings
+- Resolved by enabling:
+  ```text
+  SCENoApplyLegacyAuditPolicy = 1
+
 <hr/>
 
 ## 🤳 Connect With Me
