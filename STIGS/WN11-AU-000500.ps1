@@ -14,10 +14,11 @@
     STIG-ID         : WN11-AU-000500
 
 .TESTED ON
-    Date(s) Tested  : 
+    Date(s) Tested  : 2026-04-20
     Tested By       : Orok Ironbar
-    Systems Tested  : 
-    PowerShell Ver. : 
+    Systems Tested  : Windows 11
+    PowerShell Ver. :  5.1.26100.8115 
+
 
 .USAGE
     Run as Administrator:
