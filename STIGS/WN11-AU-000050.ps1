@@ -35,5 +35,5 @@ shutdown /r /t 0
 # Apply WN11-AU-000050
 auditpol /set /subcategory:"Process Creation" /success:enable
 
-# Verify
+# Verify.
 auditpol /get /subcategory:"Process Creation" 
