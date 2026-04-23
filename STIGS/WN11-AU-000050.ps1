@@ -36,4 +36,4 @@ shutdown /r /t 0
 auditpol /set /subcategory:"Process Creation" /success:enable
 
 # Verify.
-auditpol /get /subcategory:"Process Creation" 
+auditpol /get /subcategory:"Process Creation"
