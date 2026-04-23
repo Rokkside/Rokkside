@@ -7,21 +7,21 @@
     LinkedIn        : linkedin.com/in/rokkside/
     GitHub          : github.com/rokkside
     Date Created    : 2026-04-20
-    Last Modified   : 2026-04-20
+    Last Modified   : 2026-04-22
     Version         : 1.0
     CVEs            : N/A
     Plugin IDs      : Windows Compliance Checks
-    STIG-ID         : WN11-AU-000050
+    STIG-ID         : WN11-CC-000285
 
 .TESTED ON
-    Date(s) Tested  : 2026-04-20
+    Date(s) Tested  : 2026-04-22
     Tested By       : Orok Ironbar
     Systems Tested  : Windows 11
     PowerShell Ver. : 5.1.26100.8115
 
 .USAGE
     Run as Administrator:
-    PS C:\> .\WN11-AU-000050.ps1
+    PS C:\> .\WN11-CC-000285.ps1
 #>
 
 # Force advanced audit policy
