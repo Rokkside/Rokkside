@@ -1,83 +1,80 @@
 <#
 .SYNOPSIS
-    Configures the system to audit Detailed Tracking - Process Creation (Success).
+    This PowerShell script ensures that the system is configured to audit
+    Detailed Tracking - Process Creation (Success) for Windows 11.
 
-.DESCRIPTION
-    Uses PowerShell to enable auditing and registry configuration.
-    Includes clear distinction between command-line actions and required GUI steps for persistence.
+    This enables Event ID 4688 logging, which records every process launched
+    on the system. This is critical for forensic investigations, threat hunting,
+    and detecting malicious execution chains.
+
+    This script handles both the registry enforcement and auditpol configuration.
+    For persistence, the GUI steps below must also be completed.
+
+    GUI Steps (secpol.msc - Required for Persistence):
+        1. Open Local Security Policy (secpol.msc)
+        2. Navigate to:
+              Security Settings >>
+              Advanced Audit Policy Configuration >>
+              System Audit Policies >>
+              Detailed Tracking
+        3. Double-click "Audit Process Creation"
+        4. Check: "Configure the following audit events"
+        5. Check: "Success"
+        6. Click Apply then OK and close the editor
+        7. Run: gpupdate /force
+           to apply immediately without waiting for the next refresh cycle
+
+    Note: On domain-joined machines, this setting should be applied at the
+    Active Directory GPO level by a domain administrator to prevent the
+    audit policy from being overwritten during Group Policy refresh.
 
 .NOTES
     Author          : Orok Ironbar
     LinkedIn        : linkedin.com/in/rokkside/
     GitHub          : github.com/rokkside
     Date Created    : 2026-04-20
-    Last Modified   : 2026-05-02
-    Version         : 1.3
+    Last Modified   : 2026-05-03
+    Version         : 1.4
+    CVEs            : N/A
+    Plugin IDs      : Windows Compliance Checks
     STIG-ID         : WN11-AU-000050
-
+    Documentation   : https://stigaview.com/products/win11/v2r7/WN11-AU-000050/
 .TESTED ON
-    Windows 11 | PowerShell 5.1
-
+    Date(s) Tested  : 2026-04-20
+    Tested By       : Orok Ironbar
+    Systems Tested  : Windows 11
+    PowerShell Ver. : 5.1.26100.8115
 .USAGE
-    Run as Administrator:
+    Run this script with administrative privileges to remediate STIG WN11-AU-000050.
+    Example syntax:
     PS C:\> .\WN11-AU-000050.ps1
 #>
 
-# ================================
-# 💻 COMMAND LINE (POWERSHELL)
-# ================================
+$RegPath  = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
+$RegName  = "SCENoApplyLegacyAuditPolicy"
+$RegValue = 1
 
-# --- Step 1: Enforce Advanced Audit Policy ---
-# Ensures Windows uses advanced audit policy instead of legacy
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
-    -Name "SCENoApplyLegacyAuditPolicy" -Value 1 -Type DWord
+# Step 1: Enforce advanced audit policy over legacy audit policy
+Set-ItemProperty -Path $RegPath -Name $RegName -Value $RegValue -Type DWord
 
-# --- Step 2: Enable Process Creation auditing (Success) ---
-# Enables logging of process creation events (STIG requirement)
+# Verify registry setting was applied
+$Result = Get-ItemProperty -Path $RegPath -Name $RegName
+Write-Host "Registry value '$RegName' set to: $($Result.$RegName)" -ForegroundColor Green
+
+# Step 2: Enable Process Creation auditing (Success) via auditpol
 auditpol /set /subcategory:"Process Creation" /success:enable
 
-# --- Step 3: Verify via CLI ---
-Write-Host "`n[+] Verifying audit policy (CLI)..." -ForegroundColor Cyan
+# Verify audit policy was applied
+Write-Host "`nVerifying audit policy..." -ForegroundColor Cyan
 auditpol /get /subcategory:"Process Creation"
 
-# --- Step 4: Verify registry ---
-Write-Host "`n[+] Verifying registry setting..." -ForegroundColor Cyan
-Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
-    -Name "SCENoApplyLegacyAuditPolicy"
-
-# --- Step 5: Apply policy refresh ---
-Write-Host "`n[+] Applying group policy refresh..." -ForegroundColor Cyan
+# Step 3: Apply immediately without waiting for next GPO refresh cycle
+Write-Host "`nApplying Group Policy refresh..." -ForegroundColor Cyan
 gpupdate /force
 
-
-# ================================
-# 🖥️ GUI (MANUAL - REQUIRED FOR PERSISTENCE)
-# ================================
-
-Write-Host "`n[!] MANUAL STEP REQUIRED (GUI)" -ForegroundColor Yellow
-Write-Host "PowerShell enables the setting, but GUI/GPO makes it persistent." -ForegroundColor Yellow
-
-Write-Host "`nOpen: secpol.msc" -ForegroundColor Yellow
-
-Write-Host "Navigate to:" -ForegroundColor Yellow
-Write-Host "Security Settings" -ForegroundColor Yellow
-Write-Host "→ Advanced Audit Policy Configuration" -ForegroundColor Yellow
-Write-Host "→ System Audit Policies" -ForegroundColor Yellow
-Write-Host "→ Detailed Tracking" -ForegroundColor Yellow
-Write-Host "→ Audit Process Creation" -ForegroundColor Yellow
-
-Write-Host "`nThen configure:" -ForegroundColor Yellow
-Write-Host "[✔] Configure the following audit events" -ForegroundColor Yellow
-Write-Host "[✔] Success" -ForegroundColor Yellow
-Write-Host "Click Apply → OK" -ForegroundColor Yellow
-
-
-# ================================
-# 🔁 FINAL VERIFICATION
-# ================================
-
-Write-Host "`n[+] FINAL CHECK (after GUI step):" -ForegroundColor Cyan
-Write-Host "Run: auditpol /get /subcategory:`"Process Creation`"" -ForegroundColor Cyan
-
-Write-Host "`nExpected Output:" -ForegroundColor Green
-Write-Host "Process Creation    Success" -ForegroundColor Green
+# Step 4: Remind operator to complete GUI steps for persistence
+Write-Host "`n[ACTION REQUIRED] Complete the GUI steps in the script synopsis" -ForegroundColor Yellow
+Write-Host "to ensure this setting persists across reboots and GPO refreshes." -ForegroundColor Yellow
+Write-Host "`nFinal verification command:" -ForegroundColor Cyan
+Write-Host 'auditpol /get /subcategory:"Process Creation"' -ForegroundColor White
+Write-Host "`nExpected output: Process Creation    Success" -ForegroundColor Green
