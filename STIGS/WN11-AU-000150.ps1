@@ -70,9 +70,9 @@ auditpol /get /subcategory:"Security System Extension"
 $AuditDir = "C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit"
 New-Item -Path $AuditDir -ItemType Directory -Force | Out-Null
 
-$AuditCSV  = "$AuditDir\audit.csv"
-$NewEntry  = ",System,Security System Extension,{0CCE9211-69AE-11D9-BED3-505054503030},Success,,1"
-$Header    = "Machine Name,Policy Target,Subcategory,Subcategory GUID,Inclusion Setting,Exclusion Setting,Setting Value"
+$AuditCSV = "$AuditDir\audit.csv"
+$NewEntry = ",System,Security System Extension,{0CCE9211-69AE-11D9-BED3-505054503030},Success,,1"
+$Header   = "Machine Name,Policy Target,Subcategory,Subcategory GUID,Inclusion Setting,Exclusion Setting,Setting Value"
 
 If (Test-Path $AuditCSV) {
     $Existing = Get-Content $AuditCSV
@@ -80,7 +80,7 @@ If (Test-Path $AuditCSV) {
         Add-Content -Path $AuditCSV -Value $NewEntry
         Write-Host "Appended Security System Extension entry to audit.csv" -ForegroundColor Green
     } Else {
-        Write-Host "Entry already exists in audit.csv — no change needed" -ForegroundColor Yellow
+        Write-Host "Entry already exists in audit.csv - no change needed" -ForegroundColor Yellow
     }
 } Else {
     Set-Content -Path $AuditCSV -Value "$Header`n$NewEntry" -Encoding UTF8
