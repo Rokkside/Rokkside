@@ -1,17 +1,23 @@
 <#
 .SYNOPSIS
     This PowerShell script ensures that the system is configured to audit
-    Logon/Logoff - Special Logon successes on Windows 11, as required by
-    STIG WN11-AU-000150 (V2R7).
+    System - Security System Extension successes on Windows 11, as required
+    by STIG WN11-AU-000150 (V2R7).
 
-    Special Logon records logons that use administrative privileges and can
-    be used to elevate processes. Auditing these events is critical for
-    detecting unauthorized privilege use, tracking administrative access,
-    and identifying potential indicators of compromise involving elevated
-    account activity.
+    Security System Extension records events related to extension code being
+    loaded by the security subsystem. Auditing these events is critical for
+    detecting unauthorized security extension loading, identifying configuration
+    errors, and analyzing compromises or attacks that may have occurred against
+    the security subsystem.
 
-    This script handles both the registry enforcement and auditpol configuration.
-    For persistence, the GUI steps below must also be completed.
+    NOTE: This STIG ID maps to different controls depending on the STIG version.
+    In V2R7 (the version used by the DISA_STIG_Microsoft_Windows_11_v2r7.audit
+    Tenable file), WN11-AU-000150 maps to Security System Extension, NOT
+    Special Logon. Applying the wrong control will not resolve the finding.
+
+    This script handles both the auditpol configuration and the audit.csv
+    Group Policy store. For persistence, the GUI steps below must also
+    be completed.
 
     GUI Steps (secpol.msc - Required for Persistence):
         1. Open Local Security Policy (secpol.msc)
@@ -19,8 +25,8 @@
               Security Settings >>
               Advanced Audit Policy Configuration >>
               System Audit Policies >>
-              Logon/Logoff
-        3. Double-click "Audit Special Logon"
+              System
+        3. Double-click "Audit Security System Extension"
         4. Check: "Configure the following audit events"
         5. Check: "Success"
         6. Click Apply then OK and close the editor
@@ -35,8 +41,8 @@
     Author          : Orok Ironbar
     LinkedIn        : linkedin.com/in/rokkside/
     GitHub          : github.com/rokkside
-    Date Created    : 2026-05-04
-    Last Modified   : 2026-05-04
+    Date Created    : 2026-05-06
+    Last Modified   : 2026-05-06
     Version         : 1.0
     CVEs            : N/A
     Plugin IDs      : Windows Compliance Checks
@@ -53,31 +59,46 @@
     PS C:\> .\WN11-AU-000150.ps1
 #>
 
-$RegPath  = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
-$RegName  = "SCENoApplyLegacyAuditPolicy"
-$RegValue = 1
+# Step 1: Enable Security System Extension auditing (Success) via auditpol
+auditpol /set /subcategory:"Security System Extension" /success:enable
 
-# Step 1: Enforce advanced audit policy over legacy audit policy
-Set-ItemProperty -Path $RegPath -Name $RegName -Value $RegValue -Type DWord
+# Verify auditpol was applied
+Write-Host "Verifying auditpol..." -ForegroundColor Cyan
+auditpol /get /subcategory:"Security System Extension"
 
-# Verify registry setting was applied
-$Result = Get-ItemProperty -Path $RegPath -Name $RegName
-Write-Host "Registry value '$RegName' set to: $($Result.$RegName)" -ForegroundColor Green
+# Step 2: Write to audit.csv so Group Policy and Tenable can verify the setting
+$AuditDir = "C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit"
+New-Item -Path $AuditDir -ItemType Directory -Force | Out-Null
 
-# Step 2: Enable Special Logon auditing (Success) via auditpol
-auditpol /set /subcategory:"Special Logon" /success:enable
+$AuditCSV  = "$AuditDir\audit.csv"
+$NewEntry  = ",System,Security System Extension,{0CCE9211-69AE-11D9-BED3-505054503030},Success,,1"
+$Header    = "Machine Name,Policy Target,Subcategory,Subcategory GUID,Inclusion Setting,Exclusion Setting,Setting Value"
 
-# Verify audit policy was applied
-Write-Host "`nVerifying audit policy..." -ForegroundColor Cyan
-auditpol /get /subcategory:"Special Logon"
+If (Test-Path $AuditCSV) {
+    $Existing = Get-Content $AuditCSV
+    If ($Existing -notmatch "Security System Extension") {
+        Add-Content -Path $AuditCSV -Value $NewEntry
+        Write-Host "Appended Security System Extension entry to audit.csv" -ForegroundColor Green
+    } Else {
+        Write-Host "Entry already exists in audit.csv — no change needed" -ForegroundColor Yellow
+    }
+} Else {
+    Set-Content -Path $AuditCSV -Value "$Header`n$NewEntry" -Encoding UTF8
+    Write-Host "audit.csv created with Security System Extension entry" -ForegroundColor Green
+}
 
 # Step 3: Apply immediately without waiting for next GPO refresh cycle
 Write-Host "`nApplying Group Policy refresh..." -ForegroundColor Cyan
 gpupdate /force
 
-# Step 4: Remind operator to complete GUI steps for persistence
+# Step 4: Final verification
+Write-Host "`n=== FINAL VERIFICATION ===" -ForegroundColor Cyan
+Write-Host "`nauditpol:" -ForegroundColor White
+auditpol /get /subcategory:"Security System Extension"
+Write-Host "`naudit.csv contents:" -ForegroundColor White
+Get-Content $AuditCSV
+
+# Step 5: Remind operator to complete GUI steps for persistence
 Write-Host "`n[ACTION REQUIRED] Complete the GUI steps in the script synopsis" -ForegroundColor Yellow
 Write-Host "to ensure this setting persists across reboots and GPO refreshes." -ForegroundColor Yellow
-Write-Host "`nFinal verification command:" -ForegroundColor Cyan
-Write-Host 'auditpol /get /subcategory:"Special Logon"' -ForegroundColor White
-Write-Host "`nExpected output: Special Logon    Success" -ForegroundColor Green
+Write-Host "`nExpected auditpol output: Security System Extension    Success" -ForegroundColor Green
