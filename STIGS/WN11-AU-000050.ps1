@@ -1,14 +1,21 @@
 <#
 .SYNOPSIS
     This PowerShell script ensures that the system is configured to audit
-    Detailed Tracking - Process Creation (Success) for Windows 11.
+    Detailed Tracking - Process Creation successes on Windows 11, as required
+    by STIG WN11-AU-000050 (V2R7).
 
-    This enables Event ID 4688 logging, which records every process launched
-    on the system. This is critical for forensic investigations, threat hunting,
-    and detecting malicious execution chains.
+    Process Creation records events related to the creation of a process and
+    the source. This enables Event ID 4688 logging, which records every process
+    launched on the system. This is critical for forensic investigations, threat
+    hunting, and detecting malicious execution chains.
 
-    This script handles both the registry enforcement and auditpol configuration.
-    For persistence, the GUI steps below must also be completed.
+    NOTE: Tenable V2R7 verifies this setting by reading the audit.csv file at:
+    C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv
+    Setting this via auditpol alone is not sufficient to pass the scan. Both
+    auditpol and audit.csv must be configured for full compliance.
+
+    This script handles the registry enforcement, auditpol configuration, and
+    audit.csv write. For persistence, the GUI steps below must also be completed.
 
     GUI Steps (secpol.msc - Required for Persistence):
         1. Open Local Security Policy (secpol.msc)
@@ -33,8 +40,8 @@
     LinkedIn        : linkedin.com/in/rokkside/
     GitHub          : github.com/rokkside
     Date Created    : 2026-04-20
-    Last Modified   : 2026-05-03
-    Version         : 1.4
+    Last Modified   : 2026-05-06
+    Version         : 1.5
     CVEs            : N/A
     Plugin IDs      : Windows Compliance Checks
     STIG-ID         : WN11-AU-000050
@@ -64,17 +71,43 @@ Write-Host "Registry value '$RegName' set to: $($Result.$RegName)" -ForegroundCo
 # Step 2: Enable Process Creation auditing (Success) via auditpol
 auditpol /set /subcategory:"Process Creation" /success:enable
 
-# Verify audit policy was applied
+# Verify auditpol was applied
 Write-Host "`nVerifying audit policy..." -ForegroundColor Cyan
 auditpol /get /subcategory:"Process Creation"
 
-# Step 3: Apply immediately without waiting for next GPO refresh cycle
+# Step 3: Write to audit.csv so Tenable V2R7 can verify the setting
+$AuditDir = "C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit"
+New-Item -Path $AuditDir -ItemType Directory -Force | Out-Null
+
+$AuditCSV = "$AuditDir\audit.csv"
+$NewEntry = ",System,Process Creation,{0CCE922B-69AE-11D9-BED3-505054503030},Success,,1"
+$Header   = "Machine Name,Policy Target,Subcategory,Subcategory GUID,Inclusion Setting,Exclusion Setting,Setting Value"
+
+If (Test-Path $AuditCSV) {
+    $Existing = Get-Content $AuditCSV
+    If ($Existing -notmatch "Process Creation") {
+        Add-Content -Path $AuditCSV -Value $NewEntry
+        Write-Host "Appended Process Creation entry to audit.csv" -ForegroundColor Green
+    } Else {
+        Write-Host "Entry already exists in audit.csv - no change needed" -ForegroundColor Yellow
+    }
+} Else {
+    Set-Content -Path $AuditCSV -Value "$Header`n$NewEntry" -Encoding UTF8
+    Write-Host "audit.csv created with Process Creation entry" -ForegroundColor Green
+}
+
+# Step 4: Apply immediately without waiting for next GPO refresh cycle
 Write-Host "`nApplying Group Policy refresh..." -ForegroundColor Cyan
 gpupdate /force
 
-# Step 4: Remind operator to complete GUI steps for persistence
+# Step 5: Final verification
+Write-Host "`n=== FINAL VERIFICATION ===" -ForegroundColor Cyan
+Write-Host "`nauditpol:" -ForegroundColor White
+auditpol /get /subcategory:"Process Creation"
+Write-Host "`naudit.csv contents:" -ForegroundColor White
+Get-Content $AuditCSV
+
+# Step 6: Remind operator to complete GUI steps for persistence
 Write-Host "`n[ACTION REQUIRED] Complete the GUI steps in the script synopsis" -ForegroundColor Yellow
 Write-Host "to ensure this setting persists across reboots and GPO refreshes." -ForegroundColor Yellow
-Write-Host "`nFinal verification command:" -ForegroundColor Cyan
-Write-Host 'auditpol /get /subcategory:"Process Creation"' -ForegroundColor White
-Write-Host "`nExpected output: Process Creation    Success" -ForegroundColor Green
+Write-Host "`nExpected auditpol output: Process Creation    Success" -ForegroundColor Green
